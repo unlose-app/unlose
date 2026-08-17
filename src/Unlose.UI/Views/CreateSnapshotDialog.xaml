@@ -1,0 +1,85 @@
+<Window x:Class="Unlose.UI.Views.CreateSnapshotDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="unlose" Height="220" Width="420"
+        FontFamily="Segoe UI, Microsoft YaHei UI"
+        WindowStyle="None" AllowsTransparency="True"
+        Background="Transparent" WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
+    <Border Background="White" CornerRadius="12" BorderBrush="#D1D5DB" BorderThickness="1"
+            MouseDown="Window_MouseDown">
+        <Border.Effect>
+            <DropShadowEffect Color="#000000" BlurRadius="16" ShadowDepth="2" Opacity="0.15"/>
+        </Border.Effect>
+        <Grid Margin="24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock x:Name="LblTitle" Text="创建快照" FontSize="18" FontWeight="SemiBold"
+                       Foreground="#0369A1" Margin="0,0,0,16" FontFamily="Segoe UI Semibold, Microsoft YaHei UI"/>
+
+            <TextBlock x:Name="LblDesc" Grid.Row="1" Text="快照描述（可选）："
+                       Foreground="#4A7A9B" FontSize="12" Margin="0,0,0,6"/>
+
+            <TextBox x:Name="DescTextBox" Grid.Row="2" FontSize="13"
+                     Background="#F8FAFC" Foreground="#0C4A6E"
+                     BorderBrush="#D1D5DB" Padding="10,8"
+                     VerticalContentAlignment="Center"/>
+
+            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                <Button x:Name="BtnCancel" Content="取消" Click="Cancel_Click"
+                        Background="White" Foreground="#4A7A9B" BorderBrush="#D1D5DB"
+                        BorderThickness="1" Padding="20,8" Margin="0,0,12,0" Cursor="Hand">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="bdr" Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="bdr" Property="Background" Value="#F3F4F6"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button x:Name="BtnCreate" Content="创建" Click="Create_Click"
+                        Background="#0369A1" Foreground="White" BorderThickness="0"
+                        Padding="20,8" Cursor="Hand">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="bdr" Background="{TemplateBinding Background}"
+                                                BorderThickness="0"
+                                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="bdr" Property="Background" Value="#0284C7"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

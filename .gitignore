@@ -1,0 +1,67 @@
+# ===== 构建产物 =====
+**/obj/
+**/bin/
+**/Debug/
+**/Release/
+**/Publish/
+
+# ===== Visual Studio =====
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.VC.db
+*.VC.opendb
+.vscode/settings.json
+
+# ===== NuGet =====
+packages/
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+
+# ===== WiX 安装程序产物 =====
+Installer/*.msi
+Installer/*.wixpdb
+Installer/*.wixobj
+
+# ===== 运行时 / 日志 =====
+*.log
+*.log.*
+logs/
+
+# ===== 系统文件 =====
+Thumbs.db
+Desktop.ini
+.DS_Store
+# 热部署产物（编译DLL+部署脚本，不入库）
+tests/vm-e2e/hotfix/
+
+# ===== 测试工具/会话产物（不入库）=====
+.playwright-mcp/
+.solomd/
+# ===== 内部协作文件（不随开源发布）=====
+CLAUDE.md
+
+# ===== AI 工具会话产物（不入库）=====
+.zcode/
+sso-login.png
+
+# ===== 构建产物 / 测试残留（不入库）=====
+publish-test/
+.aider.chat.history.md
+.aider/
+
+# ===== 官网（website）构建产物 =====
+website/node_modules/
+website/dist/
+website/.astro/
+
+# ===== 开发期截图残留（不入库）=====
+/after-*.png
+/after2-*.png
+/after3-*.png
+/before-*.png
+/solomd-*.png

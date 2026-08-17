@@ -1,0 +1,46 @@
+<Application x:Class="Unlose.UI.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- No StartupUri: App.OnStartup creates the window manually to support tray-only mode and single instance -->
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Resources/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Brand primary color: aligned with prototype primary: #0369A1 -->
+            <SolidColorBrush x:Key="BrandPrimary" Color="#0369A1"/>
+            <SolidColorBrush x:Key="BrandSecondary" Color="#0EA5E9"/>
+            <SolidColorBrush x:Key="DangerBrush" Color="#EF4444"/>
+            <SolidColorBrush x:Key="WarningBrush" Color="#F97316"/>
+            <SolidColorBrush x:Key="SuccessBrush" Color="#22C55E"/>
+            <!-- Light theme background: #F0F9FF -->
+            <SolidColorBrush x:Key="BackgroundBrush" Color="#F0F9FF"/>
+            <SolidColorBrush x:Key="PrimaryBrush" Color="#0369A1"/>
+            <!-- Primary text color: deep navy #0C4A6E -->
+            <SolidColorBrush x:Key="TextPrimaryBrush" Color="#0C4A6E"/>
+            <SolidColorBrush x:Key="TextSecondaryBrush" Color="#4A7A9B"/>
+            <!-- Glassmorphism card: translucent white -->
+            <SolidColorBrush x:Key="CardBrush" Color="#B3FFFFFF"/>
+            <SolidColorBrush x:Key="GlassBorderBrush" Color="#66FFFFFF"/>
+            <!-- Sidebar background: white at 20% opacity -->
+            <SolidColorBrush x:Key="SurfaceBrush" Color="#33FFFFFF"/>
+            <!-- Window translucent background -->
+            <SolidColorBrush x:Key="SurfaceAcrylic" Color="#4DFFFFFF"/>
+            <!-- Title bar -->
+            <SolidColorBrush x:Key="TitleBarBrush" Color="#66FFFFFF"/>
+            <!-- Warning banner -->
+            <SolidColorBrush x:Key="WarningBannerBg" Color="#FFFBEB"/>
+            <SolidColorBrush x:Key="WarningBannerBorder" Color="#FDE68A"/>
+            <SolidColorBrush x:Key="WarningBannerText" Color="#92400E"/>
+            <!-- Wallpaper gradient background -->
+            <LinearGradientBrush x:Key="WallpaperGradient" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#C7E8F8" Offset="0.0"/>
+                <GradientStop Color="#D4F1E4" Offset="0.35"/>
+                <GradientStop Color="#C9DFF5" Offset="0.65"/>
+                <GradientStop Color="#D5CFF7" Offset="1.0"/>
+            </LinearGradientBrush>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
+

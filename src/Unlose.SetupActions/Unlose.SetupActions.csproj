@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- MSI custom-action DLL (WiX DTF). Targets .NET Framework 4.8 on purpose: the CLR 4.x is part of
+       every supported Windows, so the CA runs on clean machines with zero prerequisites (the app
+       binaries are self-contained .NET 8 and cannot serve as an installer-side dependency).
+       All installer-side service/process work goes through this CA so the install never spawns a
+       console process (sc.exe/taskkill/ping flashed console windows; HideTarget did not suppress them). -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>Unlose.SetupActions</AssemblyName>
+    <RootNamespace>Unlose.SetupActions</RootNamespace>
+    <!-- The DTF targets pack the managed assembly into Unlose.SetupActions.CA.dll (native SfxCA shim).
+         The shim's bitness follows $(Platform) and defaults to the x86 stub — the x64 package then ran
+         the CA inside a 32-bit custom-action server and failed with BadImageFormatException (host test
+         v1.0.9.3 first run). Pin the x64 stub explicitly; the MSI package template is x64. -->
+    <SfxCADll>$(PkgWixToolset_Dtf_CustomAction)\tools\x64\SfxCA.dll</SfxCADll>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Reference assemblies let the modern dotnet SDK build net48 without a full .NET FW install -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="WixToolset.Dtf.CustomAction" Version="6.0.0" GeneratePathProperty="true" />
+    <Reference Include="System.ServiceProcess" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Packed next to the managed assembly; SfxCA reads it to bind CLR v4 — without it the shim
+         defaulted to CLR v2.0.50727 and could not load the net48 assembly (BadImageFormatException). -->
+    <Content Include="CustomAction.config" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,606 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+  <!-- v1.0.4 (2026-08-15): ProductCode changed to auto-assigned (*). The previous fixed ProductCode was
+       the root cause of "installing the new version prompts that the old version must be uninstalled first"
+       (error 1638) — an identical ProductCode is treated as the same product, so MajorUpgrade never had
+       a chance to run. With auto ProductCode + stable UpgradeCode + MajorUpgrade, double-clicking the new
+       MSI performs a smooth in-place upgrade (RemoveExistingProducts removes the old and installs the new)
+       with no duplicate install entries. The Package Version is extracted by the build script from
+       FileVersion in Directory.Build.props and passed in via -d UnloseVersion, keeping assembly version
+       and MSI version incremented from the same source.
+       v1.0.3.1 (2026-08-07): added deepcode-cli command-line match detection (hosted by node.exe) and
+       the QoderCN process name.
+       v1.0.3 (2026-08-07): removed the "Pause protection 30 min" button from the home page (CLI keeps
+       pause); agent status aggregated by application (ZCode × N instead of per-process); session PID
+       reuse defense (process name + start time validation).
+       2026-08-15: switched to self-contained single-file publishing (PublishSingleFile); a clean Win10
+       no longer needs the .NET 8 runtime preinstalled. All managed DLL components were removed; added
+       e_sqlite3.dll for UI/MCP/CLI, the 5 WPF native DLLs for UI, amd64\KernelTraceControl.dll /
+       msdia140.dll and rules\danger_commands.yaml for Service (the rules file had never shipped in the
+       package before; fixed here).
+       v1.0.5 (2026-08-15): added AllowSameVersionUpgrades to MajorUpgrade — MSI only honors the first
+       three version fields (official docs state the fourth is ignored), so four-part 1.0.4.0/1.0.4.1 are
+       both 1.0.4 to MSI; the exclusive VersionMax boundary made FindRelatedProducts miss the old version,
+       and side-by-side double installs were observed in testing.
+       Fix: MSI ProductVersion uses only the first three fields (truncated in the bat) + same-version
+       in-place reinstall allowed. Releases must bump the third field; the fourth field is a build marker only.
+       2026-08-15: shortcuts given an explicit Target (without it they degrade to pointing at the install
+       directory, opening a folder on click); added LaunchUiAfterInstall (launch into the tray right after
+       install; asyncNoWait prevents installer hangs) and KillResidentProcesses (terminate UI/MCP resident
+       processes before InstallValidate, fixing the Restart Manager 2803 error dialog during upgrades —
+       closes VM task A observation item 2).
+       2026-08-15 (multilingual): added a bilingual install dialog (language radio buttons, default follows
+       OS via UserLanguageID; the choice is written to HKLM\Software\unlose\UILanguage for the UI to read on
+       first launch); shortcuts use the neutral name unlose; service Description switched to English;
+       downgrade prompt is bilingual. Package language stays 2052 — dialog text is inline bilingual,
+       no multi-language transforms.
+       v1.0.9 (2026-08-16): error 2803 recurred when upgrading with the service running — the kill CA
+       terminated UI/MCP but not unlose.Service.exe, whose loaded image locks the file at InstallValidate
+       and makes the Restart Manager demand the MsiRMFilesInUse dialog. Fix: the kill CA now stops the
+       service too (graceful sc stop + taskkill backstop; the new package's ServiceControl restarts it),
+       and MsiRMFilesInUse/FilesInUse dialogs are packaged as a safety net so any residual lock (a live
+       CLI session, antivirus) degrades to a proper dialog instead of the 2803 error box.
+       v1.0.9.3 (2026-08-17): (1) all console-exe custom actions (sc stop / ping / taskkill / sc failure)
+       replaced by a single in-process .NET Framework 4.8 DTF DLL (Unlose.SetupActions) calling SCM/process
+       APIs directly — the exe CAs flashed console windows on the desktop and HideTarget did not stop it;
+       (2) ProgressDlg controls got the mandatory Subscribe wiring (SetProgress/ActionText EventMapping),
+       without which the progress bar and the step line never update at all.
+       v1.0.9.7 (2026-08-17): (1) every engine built-in ActionText line on our paths is overridden with
+       the bilingual property pair — zh built-ins like “正在发布产品信息” read as if the installer were
+       publishing something, so RegisterProduct/PublishFeatures/PublishProduct now show “正在注册产品信息...”;
+       (2) NudgeInitialProgress (immediate, after InstallInitialize) advances the bar ~5% via the
+       ProgressAddition + ProgressReport message pair so the long script/validate phase no longer reads
+       as "not started"; (3) the cmd.exe uninstall-cleanup relay became a DTF CA (CreateNoWindow spawn),
+       making the installer 100% shell-free. -->
+  <Package Name="unlose" Version="$(var.UnloseVersion)"
+           Manufacturer="unlose Team"
+           ProductCode="*"
+           UpgradeCode="146A322C-DE98-4193-A711-47E0CCDFFDA6"
+           Language="2052" Codepage="936">
+
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+                  DowngradeErrorMessage="已安装更新版本的 unlose。 / A newer version of unlose is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+    <!-- Product icon shown in Add/Remove Programs -->
+    <Icon Id="AppIcon" SourceFile="$(var.Unlose.UI.TargetDir)Resources\unlose.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+    <!-- Icon for the brand area of the language-selection dialog (Icon control references the Binary table) -->
+    <Binary Id="BrandIconBin" SourceFile="$(var.Unlose.UI.TargetDir)Resources\unlose.ico" />
+
+    <!-- UI language: install-time language-selection dialog; default follows the OS display language
+         (UserLanguageID primary language id 4 = all Chinese LCIDs). The choice is written to
+         HKLM\Software\unlose\UILanguage; the UI resolves it as "manual selection > install selection > OS language".
+         Silent installs are covered too (SetProperty first does not depend on the UI layer).
+         The UILANG property is named with no baseline value: UserLanguageID is a system property and
+         command-line overrides are ineffective (VM test: UserLanguageID=1033 still got reset to 2052 by
+         the engine), so a "Not UILANG" guard makes `msiexec UILANG=en` an explicit admin override.
+         Definition order is execution order: Chinese override first, English fallback next, then dialog text. -->
+    <!-- MSI condition syntax has no bitwise operators; Chinese LCIDs enumerated: 2052 zh-CN / 1028 zh-TW / 3076 zh-HK / 5124 zh-MO / 4100 zh-SG -->
+    <Property Id="UILANG" Secure="yes" />
+    <SetProperty Id="UILANG" Action="SetUILang_Zh" Value="zh" Sequence="both" Before="CostInitialize"
+                 Condition="(UserLanguageID=2052 Or UserLanguageID=1028 Or UserLanguageID=3076 Or UserLanguageID=5124 Or UserLanguageID=4100) And Not UILANG" />
+    <SetProperty Id="UILANG" Action="SetUILang_En" Value="en" Sequence="both" Before="CostInitialize"
+                 Condition="Not UILANG" />
+
+    <!-- Dialog text follows the OS language itself (not bilingual side by side): control Text references
+         [properties]; the baseline is English and conditional SetProperty overrides it with Chinese. -->
+    <Property Id="DlgTitleText" Value="Please select UI language" />
+    <SetProperty Id="DlgTitleText" Action="SetDlgTitleTextZh" Value="请选择界面语言" Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+    <Property Id="DlgInstallText" Value="Install" />
+    <SetProperty Id="DlgInstallText" Action="SetDlgInstallTextZh" Value="安装" Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+    <Property Id="DlgCancelText" Value="Cancel" />
+    <SetProperty Id="DlgCancelText" Action="SetDlgCancelTextZh" Value="取消" Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+    <!-- One-line intro (the product name "unlose" is a brand name, constant in both languages, hardcoded directly) -->
+    <Property Id="DlgIntroText" Value="File-safety protection: automatic snapshots for every AI session, restore anytime" />
+    <SetProperty Id="DlgIntroText" Action="SetDlgIntroTextZh" Value="文件安全防护：每次 AI 会话自动快照，误删误改随时还原" Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+
+    <!-- Progress-dialog title (stays on screen while the install executes) -->
+    <Property Id="DlgInstallingText" Value="Installing unlose..." />
+    <SetProperty Id="DlgInstallingText" Action="SetDlgInstallingTextZh" Value="正在安装 unlose..." Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+
+    <!-- Files-in-use dialog texts (MsiRMFilesInUse / FilesInUse). The engine shows these dialogs on demand
+         when a process still holds a file at InstallValidate; without them it aborts with error 2803.
+         The kill CA stops our own processes first, so the dialogs are a safety net for external locks. -->
+    <Property Id="DlgFilesInUseTitleText" Value="Files in use" />
+    <SetProperty Id="DlgFilesInUseTitleText" Action="SetDlgFilesInUseTitleZh" Value="文件被占用" Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+    <Property Id="DlgFilesInUseBodyText" Value="The following programs are using files that need to be updated. The installer can close them now and restart them after setup." />
+    <SetProperty Id="DlgFilesInUseBodyText" Action="SetDlgFilesInUseBodyZh" Value="以下程序正在使用需要更新的文件。安装程序可以先关闭它们，并在安装完成后自动重启。" Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+    <Property Id="DlgRestartAppsText" Value="Automatically close and restart the programs" />
+    <SetProperty Id="DlgRestartAppsText" Action="SetDlgRestartAppsZh" Value="自动关闭这些程序，并在安装后重启" Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+    <Property Id="DlgOkText" Value="OK" />
+    <SetProperty Id="DlgOkText" Action="SetDlgOkTextZh" Value="确定" Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+    <!-- Checkbox default: let the Restart Manager shut the locking apps down and restart them after install -->
+    <Property Id="FileInUseProcessShutdown" Value="1" />
+
+    <!-- Action-text lines for the progress dialog ([ActionText]): the engine looks up each action's
+         description in the ActionText table when the action starts. Without these the line stays empty
+         and the dialog looks frozen outside the short file-copy bursts (the progress bar itself only
+         moves while files are copied — engine built-in behavior). -->
+    <Property Id="DlgActValidating" Value="Preparing installation..." />
+    <SetProperty Id="DlgActValidating" Action="SetDlgActValidatingZh" Value="正在准备安装..." Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+    <Property Id="DlgActStoppingService" Value="Stopping the protection service..." />
+    <SetProperty Id="DlgActStoppingService" Action="SetDlgActStoppingServiceZh" Value="正在停止保护服务..." Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+    <Property Id="DlgActClosingWindows" Value="Closing unlose windows..." />
+    <SetProperty Id="DlgActClosingWindows" Action="SetDlgActClosingWindowsZh" Value="正在关闭 unlose 窗口..." Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+    <Property Id="DlgActCopying" Value="Copying files..." />
+    <SetProperty Id="DlgActCopying" Action="SetDlgActCopyingZh" Value="正在复制文件..." Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+    <Property Id="DlgActRemovingOld" Value="Removing the older version..." />
+    <SetProperty Id="DlgActRemovingOld" Action="SetDlgActRemovingOldZh" Value="正在移除旧版本..." Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+    <Property Id="DlgActStartingService" Value="Starting the protection service..." />
+    <SetProperty Id="DlgActStartingService" Action="SetDlgActStartingServiceZh" Value="正在启动保护服务..." Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+    <Property Id="DlgActConfiguringService" Value="Configuring service recovery..." />
+    <SetProperty Id="DlgActConfiguringService" Action="SetDlgActConfiguringServiceZh" Value="正在配置服务恢复策略..." Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+    <Property Id="DlgActInitializing" Value="Initializing installation..." />
+    <SetProperty Id="DlgActInitializing" Action="SetDlgActInitializingZh" Value="正在初始化安装..." Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+    <Property Id="DlgActFinalizing" Value="Finalizing installation..." />
+    <SetProperty Id="DlgActFinalizing" Action="SetDlgActFinalizingZh" Value="正在完成安装..." Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+
+    <!-- The engine ships built-in localized ActionText for the standard actions; the zh-CN built-ins read
+         e.g. “正在发布产品信息” for RegisterProduct/PublishProduct (owner found the wording misleading —
+         the step registers the product). The overrides below replace every built-in line that shows on
+         our install/upgrade paths with the bilingual property pair, so the step line never falls back to
+         an engine string. -->
+    <Property Id="DlgActRegistering" Value="Registering product information..." />
+    <SetProperty Id="DlgActRegistering" Action="SetDlgActRegisteringZh" Value="正在注册产品信息..." Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+    <Property Id="DlgActCleaningOld" Value="Cleaning up the older version..." />
+    <SetProperty Id="DlgActCleaningOld" Action="SetDlgActCleaningOldZh" Value="正在清理旧版本..." Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+    <Property Id="DlgActRemovingFiles" Value="Removing older files..." />
+    <SetProperty Id="DlgActRemovingFiles" Action="SetDlgActRemovingFilesZh" Value="正在移除旧文件..." Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+    <Property Id="DlgActPreparingFolders" Value="Preparing folders and shortcuts..." />
+    <SetProperty Id="DlgActPreparingFolders" Action="SetDlgActPreparingFoldersZh" Value="正在准备文件夹与快捷方式..." Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+    <Property Id="DlgActWritingRegistry" Value="Updating registry and environment..." />
+    <SetProperty Id="DlgActWritingRegistry" Action="SetDlgActWritingRegistryZh" Value="正在更新注册表与环境..." Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+    <Property Id="DlgActNudging" Value="Preparing installation progress..." />
+    <SetProperty Id="DlgActNudging" Action="SetDlgActNudgingZh" Value="正在准备安装进度..." Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+
+    <!-- Exit-dialog texts (shown after a successful first install) -->
+    <Property Id="DlgSuccessTitleText" Value="Setup completed successfully" />
+    <SetProperty Id="DlgSuccessTitleText" Action="SetDlgSuccessTitleZh" Value="安装成功" Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+    <Property Id="DlgSuccessText" Value="unlose is now installed and protecting your files in the background. The protection service starts automatically with Windows." />
+    <SetProperty Id="DlgSuccessText" Action="SetDlgSuccessTextZh" Value="unlose 已安装完成，正在后台保护你的文件。保护服务随 Windows 自动启动。" Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+    <Property Id="DlgLaunchText" Value="Open unlose and check protection status" />
+    <SetProperty Id="DlgLaunchText" Action="SetDlgLaunchTextZh" Value="打开 unlose 并查看保护状态" Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+    <Property Id="DlgFinishText" Value="Finish" />
+    <SetProperty Id="DlgFinishText" Action="SetDlgFinishTextZh" Value="完成" Sequence="both" Before="CostInitialize"
+                 Condition='UILANG="zh"' />
+
+    <!-- Exit-dialog checkbox: launch the app (main window, not tray-only) when checked. Default = checked. -->
+    <Property Id="LAUNCH_ON_EXIT" Value="1" Secure="yes" />
+
+    <UI Id="UnloseLanguageUI">
+      <TextStyle Id="DlgFont" FaceName="Segoe UI" Size="8" />
+      <TextStyle Id="DlgFontTitle" FaceName="Segoe UI" Size="9" Bold="yes" />
+      <TextStyle Id="DlgFontBig" FaceName="Segoe UI" Size="11" Bold="yes" />
+      <Property Id="DefaultUIFont" Value="DlgFont" />
+
+      <!-- Brand side panel shared by both dialogs (blue gradient + logo + wordmark, generated by make-brand-panel.ps1).
+           Path is repo-root relative: the build script runs wix from the repository root. -->
+      <Binary Id="BrandPanelBin" SourceFile="src/Installer/brand-panel.bmp" />
+
+      <!-- ActionText table: drives the [ActionText] line on ProgressDlg so the user always sees which step
+           is running (stopping service / copying / removing old version / starting service).
+           WiX v4 note: the property reference must go in the Message attribute — inner text is rejected
+           (WIX0400). The engine formats [DlgActXxx] at runtime, so the zh SetProperty overrides apply. -->
+      <ProgressText Action="InstallInitialize" Message="[DlgActInitializing]" />
+      <ProgressText Action="NudgeInitialProgress" Message="[DlgActNudging]" />
+      <ProgressText Action="InstallValidate" Message="[DlgActValidating]" />
+      <ProgressText Action="PrepareUpgrade" Message="[DlgActStoppingService]" />
+      <!-- Engine built-in zh lines replaced with our bilingual wording (registering not “发布”): -->
+      <ProgressText Action="ProcessComponents" Message="[DlgActCleaningOld]" />
+      <ProgressText Action="UnpublishFeatures" Message="[DlgActCleaningOld]" />
+      <ProgressText Action="RemoveRegistryValues" Message="[DlgActCleaningOld]" />
+      <ProgressText Action="RemoveShortcuts" Message="[DlgActCleaningOld]" />
+      <ProgressText Action="RemoveEnvironmentStrings" Message="[DlgActCleaningOld]" />
+      <ProgressText Action="RemoveFiles" Message="[DlgActRemovingFiles]" />
+      <ProgressText Action="RemoveFolders" Message="[DlgActRemovingFiles]" />
+      <ProgressText Action="StopServices" Message="[DlgActStoppingService]" />
+      <ProgressText Action="CreateFolders" Message="[DlgActPreparingFolders]" />
+      <ProgressText Action="InstallFiles" Message="[DlgActCopying]" />
+      <ProgressText Action="CreateShortcuts" Message="[DlgActPreparingFolders]" />
+      <ProgressText Action="WriteRegistryValues" Message="[DlgActWritingRegistry]" />
+      <ProgressText Action="WriteEnvironmentStrings" Message="[DlgActWritingRegistry]" />
+      <ProgressText Action="RemoveExistingProducts" Message="[DlgActRemovingOld]" />
+      <ProgressText Action="InstallServices" Message="[DlgActStartingService]" />
+      <ProgressText Action="StartServices" Message="[DlgActStartingService]" />
+      <ProgressText Action="ConfigureServiceFailureActions" Message="[DlgActConfiguringService]" />
+      <ProgressText Action="RegisterProduct" Message="[DlgActRegistering]" />
+      <ProgressText Action="PublishFeatures" Message="[DlgActRegistering]" />
+      <ProgressText Action="PublishProduct" Message="[DlgActRegistering]" />
+      <ProgressText Action="InstallFinalize" Message="[DlgActFinalizing]" />
+
+      <!-- ════════ Dialog 1: language selection (every interactive install: first install, upgrade, reinstall) ════════ -->
+      <Dialog Id="LanguageDlg" Width="420" Height="280" Title="unlose Setup" NoMinimize="yes">
+        <Control Id="BrandPanel" Type="Bitmap" X="0" Y="0" Width="130" Height="280" Text="BrandPanelBin" TabSkip="yes" />
+        <Control Id="BrandIntro" Type="Text" X="150" Y="22" Width="252" Height="34"
+                 Transparent="yes" NoPrefix="no" Text="[DlgIntroText]" />
+        <Control Id="TopLine" Type="Line" X="150" Y="74" Width="262" Height="0" />
+        <Control Id="DlgTitle" Type="Text" X="150" Y="86" Width="252" Height="16"
+                 Transparent="yes" NoPrefix="no"
+                 Text="{\DlgFontTitle}[DlgTitleText]" />
+        <!-- Language names written in their own language is international convention; both entries are constant regardless of OS -->
+        <Control Id="LangGroup" Type="RadioButtonGroup" X="162" Y="112" Width="240" Height="56"
+                 Property="UILANG">
+          <RadioButtonGroup Property="UILANG">
+            <RadioButton Value="zh" X="0" Y="0" Width="230" Height="18" Text="中文（简体）" />
+            <RadioButton Value="en" X="0" Y="26" Width="230" Height="18" Text="English" />
+          </RadioButtonGroup>
+        </Control>
+        <Control Id="BottomLine" Type="Line" X="150" Y="246" Width="262" Height="0" />
+        <Control Id="Install" Type="PushButton" X="238" Y="252" Width="94" Height="18"
+                 Default="yes" Text="[DlgInstallText]">
+          <!-- FRESHINSTALL marks that this UI flow is a first install (drives the ExitDlg below) -->
+          <Publish Property="FRESHINSTALL" Value="1" />
+          <Publish Event="EndDialog" Value="Return" />
+        </Control>
+        <Control Id="Cancel" Type="PushButton" X="340" Y="252" Width="66" Height="18"
+                 Cancel="yes" Text="[DlgCancelText]">
+          <Publish Event="EndDialog" Value="Exit" />
+        </Control>
+      </Dialog>
+
+      <!-- ════════ Dialog 1.5: progress (shown while the install executes, between LanguageDlg and ExitDlg) ════════
+           Modeless: required — the MSI engine drives the execute phase while this dialog is on screen.
+           The Subscribe elements are the mandatory EventMapping wiring: the engine only feeds the bar and
+           the step line to controls that subscribe (SetProgress → ProgressBar, ActionText → Text). Without
+           them both stay frozen no matter what the ActionText table contains — that was the real "no
+           progress" defect (fixed v1.0.9.3 after the ActionText table was added in v1.0.9.2). -->
+      <Dialog Id="ProgressDlg" Width="420" Height="280" Title="unlose Setup" NoMinimize="yes" Modeless="yes">
+        <Control Id="BrandPanel" Type="Bitmap" X="0" Y="0" Width="130" Height="280" Text="BrandPanelBin" TabSkip="yes" />
+        <Control Id="InstallingTitle" Type="Text" X="150" Y="40" Width="252" Height="26"
+                 Transparent="yes" NoPrefix="no" Text="{\DlgFontBig}[DlgInstallingText]" />
+        <Control Id="ProgressBar" Type="ProgressBar" X="150" Y="96" Width="252" Height="15"
+                 ProgressBlocks="yes" Text="ProgressDone">
+          <Subscribe Event="SetProgress" Attribute="Progress" />
+        </Control>
+        <Control Id="ActionText" Type="Text" X="150" Y="120" Width="252" Height="36"
+                 Transparent="yes" NoPrefix="no" Text="[ActionText]">
+          <Subscribe Event="ActionText" Attribute="Text" />
+        </Control>
+        <Control Id="BottomLine" Type="Line" X="150" Y="246" Width="262" Height="0" />
+        <Control Id="Cancel" Type="PushButton" X="340" Y="252" Width="66" Height="18"
+                 Cancel="yes" Text="[DlgCancelText]">
+          <!-- Cancel immediately (the MSI engine rolls back the install); consistent with LanguageDlg's Cancel -->
+          <Publish Event="EndDialog" Value="Exit" />
+        </Control>
+      </Dialog>
+
+      <!-- ════════ Dialog: Restart Manager files-in-use (shown on demand when a process still locks a file) ════════
+           The engine populates the ListBox (Property=FileInUseProcess) with the locking process names itself.
+           OK with the shutdown checkbox publishes RMShutdownAndRestart so RM closes the apps and restarts
+           them after install; without the checkbox the install continues and may finish with a reboot.
+           Packaging this dialog is what turns the old fatal 2803 error box into a recoverable prompt. -->
+      <Dialog Id="MsiRMFilesInUse" Width="420" Height="280" Title="unlose Setup" NoMinimize="yes">
+        <Control Id="BrandPanel" Type="Bitmap" X="0" Y="0" Width="130" Height="280" Text="BrandPanelBin" TabSkip="yes" />
+        <Control Id="Title" Type="Text" X="150" Y="40" Width="252" Height="26"
+                 Transparent="yes" NoPrefix="no" Text="{\DlgFontBig}[DlgFilesInUseTitleText]" />
+        <Control Id="Body" Type="Text" X="150" Y="76" Width="252" Height="40"
+                 Transparent="yes" NoPrefix="no" Text="[DlgFilesInUseBodyText]" />
+        <Control Id="List" Type="ListBox" Property="FileInUseProcess" X="150" Y="124" Width="252" Height="76"
+                 Disabled="yes" Sorted="yes" />
+        <Control Id="RestartApps" Type="CheckBox" Property="FileInUseProcessShutdown" CheckBoxValue="1"
+                 X="150" Y="210" Width="252" Height="16" Text="[DlgRestartAppsText]" />
+        <Control Id="BottomLine" Type="Line" X="150" Y="246" Width="262" Height="0" />
+        <Control Id="OK" Type="PushButton" X="238" Y="252" Width="94" Height="18"
+                 Default="yes" Text="[DlgOkText]">
+          <Publish Event="RMShutdownAndRestart" Value="0" Condition="FileInUseProcessShutdown" />
+          <Publish Event="EndDialog" Value="Return" />
+        </Control>
+        <Control Id="Cancel" Type="PushButton" X="340" Y="252" Width="66" Height="18"
+                 Cancel="yes" Text="[DlgCancelText]">
+          <Publish Event="EndDialog" Value="Exit" />
+        </Control>
+      </Dialog>
+
+      <!-- ════════ Dialog: legacy files-in-use (same safety net when RM is disabled, e.g. MSIRESTARTMANAGERCONTROL=Disable) ════════
+           The engine fills the ListBox itself; per the InstallValidate docs the ListBox of the FilesInUse
+           dialog must be associated with the FileInUseProcess property (a wrong property name makes the
+           engine fail to populate the list, error 2262, observed in VM/host testing). OK continues (locked
+           files are then replaced via a reboot), Cancel aborts the install. -->
+      <Dialog Id="FilesInUse" Width="420" Height="280" Title="unlose Setup" NoMinimize="yes">
+        <Control Id="BrandPanel" Type="Bitmap" X="0" Y="0" Width="130" Height="280" Text="BrandPanelBin" TabSkip="yes" />
+        <Control Id="Title" Type="Text" X="150" Y="40" Width="252" Height="26"
+                 Transparent="yes" NoPrefix="no" Text="{\DlgFontBig}[DlgFilesInUseTitleText]" />
+        <Control Id="Body" Type="Text" X="150" Y="76" Width="252" Height="40"
+                 Transparent="yes" NoPrefix="no" Text="[DlgFilesInUseBodyText]" />
+        <Control Id="List" Type="ListBox" Property="FileInUseProcess" X="150" Y="124" Width="252" Height="96"
+                 Disabled="yes" Sorted="yes" />
+        <Control Id="BottomLine" Type="Line" X="150" Y="246" Width="262" Height="0" />
+        <Control Id="OK" Type="PushButton" X="238" Y="252" Width="94" Height="18"
+                 Default="yes" Text="[DlgOkText]">
+          <Publish Event="EndDialog" Value="Return" />
+        </Control>
+        <Control Id="Cancel" Type="PushButton" X="340" Y="252" Width="66" Height="18"
+                 Cancel="yes" Text="[DlgCancelText]">
+          <Publish Event="EndDialog" Value="Exit" />
+        </Control>
+      </Dialog>
+
+      <!-- ════════ Dialog 2: exit / success (after a successful first install) ════════ -->
+      <Dialog Id="ExitDlg" Width="420" Height="280" Title="unlose Setup" NoMinimize="yes">
+        <Control Id="BrandPanel" Type="Bitmap" X="0" Y="0" Width="130" Height="280" Text="BrandPanelBin" TabSkip="yes" />
+        <Control Id="SuccessTitle" Type="Text" X="150" Y="58" Width="252" Height="26"
+                 Transparent="yes" NoPrefix="no"
+                 Text="{\DlgFontBig}[DlgSuccessTitleText]" />
+        <Control Id="SuccessText" Type="Text" X="150" Y="92" Width="252" Height="44"
+                 Transparent="yes" NoPrefix="no" Text="[DlgSuccessText]" />
+        <Control Id="LaunchCheckbox" Type="CheckBox" X="150" Y="152" Width="252" Height="18"
+                 Property="LAUNCH_ON_EXIT" CheckBoxValue="1" Text="[DlgLaunchText]" />
+        <Control Id="BottomLine" Type="Line" X="150" Y="246" Width="262" Height="0" />
+        <Control Id="Finish" Type="PushButton" X="316" Y="252" Width="90" Height="18"
+                 Default="yes" Cancel="yes" Text="[DlgFinishText]">
+          <!-- Launch the main UI (not tray-only) as the installing user when the checkbox is on.
+               Immediate CA in the UI sequence runs after ExecuteAction completed, so files exist.
+               asyncNoWait: the UI process is long-lived; waiting would hang the installer. -->
+          <Publish Event="DoAction" Value="LaunchAppOnExit" Condition="LAUNCH_ON_EXIT" />
+          <Publish Event="EndDialog" Value="Return" />
+        </Control>
+      </Dialog>
+
+      <InstallUISequence>
+        <!-- Language selection shows on every interactive install run: first install, cross-version upgrade
+             AND same-version double-click reinstall (owner decision 2026-08-17: re-running the MSI should
+             feel like a full install, and the dialog doubles as the place to change the UI language).
+             NOT Installed alone would skip it on same-version reinstalls (Installed=true then); the
+             maintenance modes that must stay quiet are ARP repair (REINSTALL set) and uninstall
+             (REMOVE="ALL"). Silent installs (/qn) never show dialogs regardless. -->
+        <Show Dialog="LanguageDlg" Before="ExecuteAction" Condition="NOT REMOVE=&quot;ALL&quot; AND NOT REINSTALL" />
+        <!-- Progress dialog: stays on screen during the whole execute phase so the user always sees
+             "Installing unlose..." instead of a vanished window (the engine updates the progress bar). -->
+        <Show Dialog="ProgressDlg" Before="ExecuteAction" />
+        <!-- Success dialog after the install completes; shown whenever the LanguageDlg flow ran
+             (FRESHINSTALL is set by the LanguageDlg Install button: first install, upgrade, reinstall).
+             Silent installs (/qn) never show it. -->
+        <Show Dialog="ExitDlg" OnExit="success" Condition="FRESHINSTALL" />
+      </InstallUISequence>
+    </UI>
+
+    <!-- Launches unlose.UI.exe (main window) after the user clicks Finish on the exit dialog.
+         Declared at Package level (a UI element may not contain CustomAction children);
+         the ExitDlg Finish button references it via Publish DoAction. -->
+    <CustomAction Id="LaunchAppOnExit" Directory="INSTALLFOLDER"
+                  ExeCommand='"[INSTALLFOLDER]unlose.UI.exe"'
+                  Execute="immediate" Impersonate="yes" Return="asyncNoWait" />
+
+    <Feature Id="ProductFeature" Title="unlose" Level="1">
+      <ComponentGroupRef Id="ProductComponents" />
+      <ComponentGroupRef Id="ServiceComponents" />
+      <ComponentGroupRef Id="StartupComponents" />
+    </Feature>
+
+    <!-- Reference custom actions defined in standalone Fragments, or the linker drops them entirely
+         (the CA would not be included in the package and would not run on uninstall) -->
+    <CustomActionRef Id="UninstallGuardCleanup" />
+    <!-- INST-001 tiered service-failure recovery; previously never packaged for the same missing-reference reason, added here too -->
+    <CustomActionRef Id="ConfigureServiceFailureActions" />
+  </Package>
+
+  <Fragment>
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="unlose">
+        <!-- Native subdirectories produced by self-contained single-file publishing: TraceEvent's amd64\*.dll and the dangerous-command rules yaml -->
+        <Directory Id="ServiceAmd64Folder" Name="amd64" />
+        <Directory Id="ServiceRulesFolder" Name="rules" />
+      </Directory>
+    </StandardDirectory>
+  </Fragment>
+
+  <Fragment>
+    <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+      <Component Id="UIExe" Bitness="always64">
+        <File Source="$(var.Unlose.UI.TargetDir)unlose.UI.exe" KeyPath="yes" />
+      </Component>
+      <!-- Shortcuts live in their own per-user components (ICE43/ICE57: non-advertised shortcuts need an
+           HKCU registry KeyPath and cannot be mixed into per-machine file components).
+           Explicit Target is required: when the component KeyPath is a registry value rather than a file,
+           a shortcut without Target degrades to pointing at the install directory (click opens a folder
+           instead of launching the app) — hit in local testing.
+           Name is uniformly the brand name unlose: language-neutral, so English-locale users never see
+           Chinese in the Start menu. -->
+      <Component Id="StartMenuShortcut" Guid="D4E5F6A7-B8C9-0123-DEF0-123456789ABC" Bitness="always64">
+        <Shortcut Id="StartMenuShortcut" Directory="ProgramMenuFolder"
+                  Name="unlose" Target="[INSTALLFOLDER]unlose.UI.exe"
+                  WorkingDirectory="INSTALLFOLDER" Icon="AppIcon" />
+        <RegistryValue Root="HKCU" Key="Software\unlose\Shortcuts"
+                       Name="StartMenu" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+      <Component Id="DesktopShortcut" Guid="E5F6A7B8-C9D0-1234-EF01-23456789ABCD" Bitness="always64">
+        <Shortcut Id="DesktopShortcut" Directory="DesktopFolder"
+                  Name="unlose" Target="[INSTALLFOLDER]unlose.UI.exe"
+                  WorkingDirectory="INSTALLFOLDER" Icon="AppIcon" />
+        <RegistryValue Root="HKCU" Key="Software\unlose\Shortcuts"
+                       Name="Desktop" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+      <Component Id="InstallLanguage" Bitness="always64">
+        <RegistryValue Root="HKLM" Key="Software\unlose" Name="UILanguage"
+                       Type="string" Value="[UILANG]" KeyPath="yes" />
+      </Component>
+      <Component Id="CliExe" Bitness="always64">
+        <File Source="$(var.Unlose.Cli.TargetDir)unlose.exe" KeyPath="yes" />
+      </Component>
+      <Component Id="McpServerExe" Bitness="always64">
+        <File Source="$(var.Unlose.McpServer.TargetDir)unlose.McpServer.exe" KeyPath="yes" />
+      </Component>
+      <!-- Self-contained single-file: all managed assemblies are embedded in the exes; only the native
+           DLLs accompanying each exe need packaging. The UI's 5 WPF native DLLs; the e_sqlite3.dll copies
+           from all four products are identical and install to the root, so a single component
+           (see ServiceSupport6 in ServiceComponents) avoids component GUID / short-filename conflicts. -->
+      <Component Id="UiNative1" Bitness="always64"><File Source="$(var.Unlose.UI.TargetDir)D3DCompiler_47_cor3.dll" KeyPath="yes" /></Component>
+      <Component Id="UiNative2" Bitness="always64"><File Source="$(var.Unlose.UI.TargetDir)PenImc_cor3.dll" KeyPath="yes" /></Component>
+      <Component Id="UiNative3" Bitness="always64"><File Source="$(var.Unlose.UI.TargetDir)PresentationNative_cor3.dll" KeyPath="yes" /></Component>
+      <Component Id="UiNative4" Bitness="always64"><File Source="$(var.Unlose.UI.TargetDir)vcruntime140_cor3.dll" KeyPath="yes" /></Component>
+      <Component Id="UiNative5" Bitness="always64"><File Source="$(var.Unlose.UI.TargetDir)wpfgfx_cor3.dll" KeyPath="yes" /></Component>
+      <!-- Path-B reachability: append the install directory to the system PATH so AI agents can invoke
+           `unlose snapshot` from the injected instructions directly -->
+      <Component Id="PathEnvironment" Guid="C3D4E5F6-A7B8-9012-CDEF-123456789012" Bitness="always64" KeyPath="yes">
+        <Environment Id="UnlosePathEnv" Name="PATH" Action="set" Part="last" System="yes" Permanent="no"
+                     Value="[INSTALLFOLDER]" />
+      </Component>
+      <!-- Tray icon: installed at the install root (the UI checks unlose.ico in the root first, then the Resources subdirectory) -->
+      <Component Id="TrayIconFile" Bitness="always64">
+        <File Source="$(var.Unlose.UI.TargetDir)Resources\unlose.ico" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <ComponentGroup Id="ServiceComponents" Directory="INSTALLFOLDER">
+      <Component Id="ServiceExe" Guid="A1B2C3D4-E5F6-7890-ABCD-EF1234567890" Bitness="always64">
+        <File Id="ServiceExeFile" Source="$(var.Unlose.Service.TargetDir)unlose.Service.exe" KeyPath="yes" />
+        <!-- Service name is uniformly unloseService, consistent with Program.cs -->
+        <ServiceInstall
+          Id="unloseServiceInstall"
+          Name="unloseService"
+          DisplayName="unlose"
+          Description="File-safety protection and snapshot management powered by VSS shadow copies"
+          Type="ownProcess"
+          Start="auto"
+          ErrorControl="normal"
+          Account="LocalSystem" />
+        <!-- Write the basic recovery action types first; precise delays are overwritten by the post-install sc.exe failure CA. -->
+        <util:ServiceConfig
+          ServiceName="unloseService"
+          FirstFailureActionType="restart"
+          SecondFailureActionType="restart"
+          ThirdFailureActionType="restart"
+          ResetPeriodInDays="1"
+          RestartServiceDelayInSeconds="5" />
+        <ServiceControl Id="StartService" Name="unloseService" Start="install" Stop="both" Remove="uninstall" Wait="yes" />
+      </Component>
+      <!-- Self-contained single-file: managed assemblies (including TraceEvent/Serilog/YamlDotNet/SQLitePCL etc.)
+           are all embedded in unlose.Service.exe; only the native companion files need packaging. -->
+      <Component Id="ServiceSupport6" Bitness="always64"><File Source="$(var.Unlose.Service.TargetDir)e_sqlite3.dll" KeyPath="yes" /></Component>
+      <Component Id="ServiceAmd64_1" Directory="ServiceAmd64Folder" Bitness="always64"><File Source="$(var.Unlose.Service.TargetDir)amd64\KernelTraceControl.dll" KeyPath="yes" /></Component>
+      <Component Id="ServiceAmd64_2" Directory="ServiceAmd64Folder" Bitness="always64"><File Source="$(var.Unlose.Service.TargetDir)amd64\msdia140.dll" KeyPath="yes" /></Component>
+      <!-- Dangerous-command rules file: old MSIs never packaged rules\danger_commands.yaml (latent defect); fixed here -->
+      <Component Id="ServiceRulesFile" Directory="ServiceRulesFolder" Bitness="always64"><File Source="$(var.Unlose.Service.TargetDir)rules\danger_commands.yaml" KeyPath="yes" /></Component>
+    </ComponentGroup>
+
+    <!-- INST-003 fix: register the UI to auto-start on user logon -->
+    <ComponentGroup Id="StartupComponents" Directory="TARGETDIR">
+      <Component Id="UIStartup" Guid="B2C3D4E5-F6A7-8901-BCDE-F12345678901">
+        <!-- tray parameter: at boot auto-start the UI only stays in the tray without opening the main window -->
+        <RegistryValue Root="HKCU"
+                       Key="Software\Microsoft\Windows\CurrentVersion\Run"
+                       Name="unlose"
+                       Value='"[INSTALLFOLDER]unlose.UI.exe" --tray'
+                       Type="string"
+                       KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+
+  <Fragment>
+    <!-- In-process managed custom actions (src/Unlose.SetupActions: .NET Framework 4.8 + WiX DTF).
+         CLR 4.x ships with every supported Windows, so the CA DLL runs prerequisite-free on clean
+         machines; the app binaries are self-contained .NET 8 and cannot serve as an installer-side
+         dependency. A DllEntry CA executes inside msiexec and spawns no process, which is why the
+         console-exe CAs (sc stop / ping / taskkill / sc failure) moved here: they flashed console
+         windows on the desktop and HideTarget did not suppress them (host test, v1.0.9.2 build). -->
+    <Binary Id="UnloseSetupActions" SourceFile="$(var.Unlose.SetupActions.CAPath)" />
+
+    <!-- INST-001 fix: implements the tiered recovery policy — restart after 5s on 1st/2nd failure, after
+         60s on the 3rd — via ChangeServiceConfig2 (SCM API) instead of a `sc.exe failure` console CA. -->
+    <CustomAction
+      Id="ConfigureServiceFailureActions"
+      BinaryRef="UnloseSetupActions"
+      DllEntry="ConfigureServiceFailureActions"
+      Execute="deferred"
+      Impersonate="no"
+      Return="ignore" />
+
+    <InstallExecuteSequence>
+      <Custom Action="ConfigureServiceFailureActions" After="StartServices" Condition='NOT REMOVE="ALL"' />
+      <!-- Post-install app launch moved to the ExitDlg checkbox (LaunchAppOnExit, UI sequence):
+           a visible "Setup completed" dialog with an "Open unlose" option replaces the old silent
+           tray auto-start. Silent installs (/qn) start nothing — appropriate for deployment. -->
+    </InstallExecuteSequence>
+  </Fragment>
+
+  <Fragment>
+    <!-- Uninstall cleanup (patent claim 11): on uninstall, the CLI asks the service to remove the guard
+         instruction blocks from each user's global memory files via the paired markers and remove the
+         deployed unlose-snapshot skill packs, restoring the original content with no residue.
+         Scheduled before StopServices: the service is still running so the pipe is reachable; the SYSTEM
+         context can write to every user directory; Return=ignore means failures never block uninstall;
+         not triggered during major upgrade (MajorUpgrade removing the old version) — the new service takes over the blocks.
+         v1.0.9.7: the cmd.exe relay became an in-process DTF CA that spawns the CLI itself with
+         CreateNoWindow (the old HideTarget exe CA could still flash a console window; the installer is
+         now 100% shell-free). INSTALLFOLDER arrives via CustomActionData; output still goes to
+         C:\ProgramData\unlose\ca-cleanup.log for troubleshooting. -->
+    <SetProperty Id="UninstallGuardCleanup" Value="[INSTALLFOLDER]" Sequence="execute"
+                 Before="UninstallGuardCleanup" Condition='REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE' />
+    <CustomAction
+      Id="UninstallGuardCleanup"
+      BinaryRef="UnloseSetupActions"
+      DllEntry="UninstallGuardCleanup"
+      Execute="deferred"
+      Impersonate="no"
+      Return="ignore" />
+
+    <!-- Stop resident lock holders early (immediate, before InstallValidate): Restart Manager checks for
+         files in use during InstallValidate; if unlose.UI.exe (tray/main window), unlose.McpServer.exe (a
+         long-lived stdio process launched by the agent host) or the unloseService host process is still
+         running, a full-UI install shows the MsiRMFilesInUse/FilesInUse dialogs (packaged since v1.0.9;
+         without them the engine pops error 2803). The dialogs are the safety net; this CA is the first
+         line so the common upgrade path shows no dialog at all.
+         Policy (unchanged through the iterations): the service must be stopped gracefully via SCM first —
+         a bare process kill would be counted as a crash and the INST-001 recovery policy would restart it
+         seconds later, re-locking the file mid-install; the process kill is only a backstop for leftovers.
+         unlose.exe (CLI) is deliberately not killed, to avoid interrupting an ongoing agent session — a
+         live CLI degrades to the packaged MsiRMFilesInUse dialog instead of 2803.
+         v1.0.9.3: the old three exe CAs (sc stop / ping wait / taskkill) became one in-process managed CA
+         (SCM + Process APIs): same behavior, zero spawned processes, zero console windows. Per-machine
+         installs run elevated, so the CA can stop the service and kill processes in any session; it never
+         fails the install (nothing running on a fresh install is the normal case). -->
+    <CustomAction
+      Id="PrepareUpgrade"
+      BinaryRef="UnloseSetupActions"
+      DllEntry="PrepareUpgrade"
+      Execute="immediate"
+      Return="ignore" />
+
+    <!-- Owner feedback (2026-08-17): the bar sits at 0% through script/validate/prepare and the install
+         feels like it never started. This immediate CA fires right after InstallInitialize (the engine
+         has just reset the bar with its master tick total) and nudges it ~5% via the documented
+         ProgressAddition + ProgressReport message pair — see ManagedActions.NudgeInitialProgress. -->
+    <CustomAction
+      Id="NudgeInitialProgress"
+      BinaryRef="UnloseSetupActions"
+      DllEntry="NudgeInitialProgress"
+      Execute="immediate"
+      Return="ignore" />
+
+    <InstallExecuteSequence>
+      <Custom Action="UninstallGuardCleanup" Before="StopServices" Condition='REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE' />
+      <!-- Resident-lock cleanup must complete before InstallValidate's Restart Manager file-lock check. -->
+      <Custom Action="PrepareUpgrade" Before="InstallValidate" />
+      <Custom Action="NudgeInitialProgress" After="InstallInitialize" />
+    </InstallExecuteSequence>
+  </Fragment>
+</Wix>

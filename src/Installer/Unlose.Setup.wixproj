@@ -1,0 +1,21 @@
+<Project Sdk="WixToolset.Sdk/4.0.5">
+
+  <PropertyGroup>
+    <OutputType>Package</OutputType>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <!-- 产物名与品牌一致（默认跟随 wixproj 文件名会生成 Unlose.Setup.msi） -->
+    <OutputName>unlose-setup-x64</OutputName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WixToolset.Util.wixext" Version="4.0.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Unlose.UI\Unlose.UI.csproj" />
+    <ProjectReference Include="..\Unlose.Cli\Unlose.Cli.csproj" />
+    <ProjectReference Include="..\Unlose.Service\Unlose.Service.csproj" />
+    <ProjectReference Include="..\Unlose.McpServer\Unlose.McpServer.csproj" />
+  </ItemGroup>
+
+</Project>

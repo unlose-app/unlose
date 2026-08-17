@@ -1,0 +1,50 @@
+<Project>
+  <!-- Single source of truth for the version number.
+       FileVersion/AssemblyVersion/NuGet Version all share this source; build-unlose-msi.bat automatically
+       passes FileVersion to the MSI (-d UnloseVersion), so no manual syncing is needed.
+
+       Versioning rules (four-part Major.Minor.Patch.Build):
+       - Major: +1 only for breaking changes / major refactors
+       - Minor: +1 for new features, new pages, new channels
+       - Patch: +1 for bug fixes, copy changes, small improvements (MSI ProductVersion only honors the first
+         three parts, so every release must bump this part; the fourth part must never be the release
+         increment — otherwise MajorUpgrade cannot detect the old version and both versions end up installed)
+       - Build: +1 for repackaging/hotfixes of the same code line (keep 0 for normal releases)
+       Only this file changes per release; running build-unlose-msi.bat afterwards produces an MSI with the same version.
+
+       History: 1.0.0 initial release → 1.0.3.1 (agent detection expansion) → 1.0.4.0 (self-contained single file + smooth upgrade fix)
+       → 1.0.5.0 (MajorUpgrade same-version in-place reinstall + manual update check + second batch of pre-release improvements)
+       → 1.0.6.0 (upgrade-path verification build: MSI ignores the 4th version field, so the 3rd field must
+       increment per release; UI double-instance ReleaseMutex fix; robocopy retry cap in sync bat)
+       → 1.0.7.0 (fault-injection round 1 fixes: DELETE_SNAPSHOT now fails cleanly on unknown ids)
+       → 1.0.8.0 (full-volume in-place restore gated: settings switch default-off + system volume refused
+       + typed confirmation + service-side PreRestore snapshot; enforced in the service so CLI/MCP cannot bypass)
+       → 1.0.9.0 (upgrade 2803 fix: kill CA now stops unloseService too; MsiRMFilesInUse/FilesInUse
+       dialogs packaged as a safety net so any residual file lock degrades to a dialog, not an error box)
+       → 1.0.9.1 (reinstall UX: language + success dialogs now also show on same-version double-click
+       reinstalls; only ARP repair/uninstall stay quiet)
+       → 1.0.9.2 (progress-dialog UX: ActionText table so the step line never goes blank + HideTarget
+       on all console-exe custom actions so no console windows flash during install)
+       → 1.0.9.3 (installer goes shell-free: console exe CAs replaced by an in-process net48 DTF CA
+       calling SCM/process APIs — HideTarget did not stop the console flashing; ProgressDlg bar/step
+       line get the mandatory Subscribe EventMapping wiring so progress actually shows)
+       → 1.0.9.4 (DTF CA runtime fix: CustomAction.config startup element gains
+       useLegacyV2RuntimeActivationPolicy so the SfxCA stub binds CLR v4 instead of failing
+       with 0x80131700 / falling back to CLR v2)
+       → 1.0.9.5 (ConfigureServiceFailureActions enables SE_SHUTDOWN_NAME before
+       ChangeServiceConfig2 — restart-type failure actions answer ERROR_ACCESS_DENIED on a
+       bare elevated token; sc.exe used to enable the privilege itself)
+       → 1.0.9.6 (failure-policy CA diagnostics: logs CAS identity/elevation, detects
+       ERROR_NOT_ALL_ASSIGNED, opens service with SERVICE_ALL_ACCESS fallback)
+       → 1.0.9.7 (progress UX round 2: built-in zh ActionText lines like “正在发布产品信息” overridden
+       with the bilingual property pair — RegisterProduct/PublishProduct now read “正在注册产品信息...”;
+       NudgeInitialProgress immediate CA advances the bar ~5% right after InstallInitialize so the
+       script/validate phase no longer looks frozen; last shell CA — the cmd.exe uninstall-cleanup
+       relay — became a DTF CA spawning the CLI with CreateNoWindow; Record field indexing fix
+       made the progress messages actually reach the engine) -->
+  <PropertyGroup>
+    <Version>1.0.9.7</Version>
+    <AssemblyVersion>1.0.9.7</AssemblyVersion>
+    <FileVersion>1.0.9.7</FileVersion>
+  </PropertyGroup>
+</Project>

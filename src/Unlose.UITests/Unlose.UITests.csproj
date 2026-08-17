@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <!-- UI automation tests must run in an x64 process to match the x64 WPF executable under test -->
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- FlaUI: no separate server process needed; drives WPF directly via UIAutomation3 -->
+    <PackageReference Include="FlaUI.Core"     Version="4.0.0" />
+    <PackageReference Include="FlaUI.UIA3"     Version="4.0.0" />
+    <!-- xUnit test framework -->
+    <PackageReference Include="xunit"                            Version="2.9.0" />
+    <PackageReference Include="xunit.runner.visualstudio"       Version="2.8.2">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.NET.Test.Sdk"           Version="17.11.1" />
+  </ItemGroup>
+
+</Project>

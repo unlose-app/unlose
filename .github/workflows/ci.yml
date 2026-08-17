@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        configuration: [ Debug, Release ]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore src/Unlose.sln
+
+      - name: Build
+        run: dotnet build src/Unlose.sln -c ${{ matrix.configuration }} --no-restore
+
+      - name: Unit tests (Unlose.Tests)
+        run: dotnet test src/Unlose.Tests/Unlose.Tests.csproj -c ${{ matrix.configuration }} --no-build --logger "trx;LogFileName=unit-tests.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.configuration }}
+          path: '**/*.trx'
+          if-no-files-found: ignore
+
+  # MSI packaging: the output is uniformly named unlose-setup-x64.msi and uploaded as the unlose-msi
+  # artifact, which install-test.yml (workflow_run trigger, self-hosted runner) downloads for install smoke tests.
+  package-msi:
+    runs-on: windows-latest
+    needs: build-and-test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build & package MSI
+        shell: cmd
+        env:
+          UNLOSE_MSIBUILD_NOPAUSE: '1'
+        run: build-unlose-msi.bat
+
+      - name: Upload MSI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unlose-msi
+          path: publish/unlose-setup-x64.msi
+          if-no-files-found: error
+
+# Note: Integration/E2E tests (real VSS snapshots, VM round-trips) require a
+# Windows VM and are run by maintainers via the Pester scripts in tests/, not in CI.
+# See CONTRIBUTING.md for the PR gate policy.

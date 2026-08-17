@@ -1,0 +1,56 @@
+# unlose dangerous-command rule base
+# Format: id / name / severity (High|Critical) / patterns (regex list) / applies_to (process name list)
+# Hot reload supported: no service restart needed after modifying this file
+
+rules:
+  - id: RULE-001
+    name: 递归删除系统目录
+    severity: Critical
+    description: "对 C:/D: 等系统卷执行递归删除"
+    applies_to: ["cmd.exe", "powershell.exe", "pwsh.exe"]
+    patterns:
+      - "(?i)rm\\s+-[rf]\\s+[A-Za-z]:\\\\"
+      - "(?i)Remove-Item\\s+.*-Recurse.*[A-Za-z]:\\\\"
+      - "(?i)del\\s+/[sq]\\s+[A-Za-z]:\\\\"
+      - "(?i)rd\\s+/[sq]\\s+[A-Za-z]:\\\\"
+
+  - id: RULE-002
+    name: 删除 VSS 快照
+    severity: Critical
+    description: 调用系统工具删除或压缩卷影副本存储
+    applies_to: ["vssadmin.exe", "wmic.exe", "cmd.exe", "powershell.exe", "pwsh.exe"]
+    patterns:
+      - "(?i)vssadmin\\s+delete\\s+shadows"
+      - "(?i)vssadmin\\s+resize\\s+shadowstorage"
+      - "(?i)shadowcopy.*delete"
+      - "(?i)Win32_ShadowCopy.*delete"
+
+  - id: RULE-003
+    name: 格式化磁盘
+    severity: Critical
+    description: 对任意盘符执行格式化命令
+    applies_to: ["cmd.exe", "powershell.exe", "pwsh.exe", "format.com"]
+    patterns:
+      - "(?i)format\\s+[A-Za-z]:"
+      - "(?i)Format-Volume\\s"
+
+  - id: RULE-004
+    name: 大范围文件删除
+    severity: High
+    description: 对任意目录执行带"递归+通配符"的删除操作
+    applies_to: ["cmd.exe", "powershell.exe", "pwsh.exe", "bash.exe", "wsl.exe"]
+    patterns:
+      - "(?i)Remove-Item\\s+.*-Recurse.*\\*"
+      - "(?i)rm\\s+-rf?\\s+.+\\*"
+      - "(?i)del\\s+/[sq].*\\*\\."
+      - "(?i)find\\s+.*-delete"
+
+  - id: RULE-005
+    name: 通过管理工具删除快照
+    severity: Critical
+    description: 通过 WMI 管理接口删除卷影副本
+    applies_to: ["wmic.exe", "powershell.exe", "pwsh.exe"]
+    patterns:
+      - "(?i)wmic\\s+shadowcopy\\s+delete"
+      - "(?i)Get-WmiObject.*Win32_ShadowCopy.*Delete"
+      - "(?i)Get-CimInstance.*Win32_ShadowCopy.*Remove"

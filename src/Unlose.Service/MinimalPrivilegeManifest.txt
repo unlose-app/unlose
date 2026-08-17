@@ -1,0 +1,18 @@
+unlose Service - 最小权限清单
+=================================
+
+必须：
+  - SeBackupPrivilege（VSS 操作）
+  - SeRestorePrivilege（文件还原）
+  - SeSecurityPrivilege（设置 Pipe ACL）
+  - SeTakeOwnershipPrivilege（还原时接管文件所有权，按需）
+
+Named Pipe：
+  - 仅 BUILTIN\Administrators 和 NT AUTHORITY\SYSTEM 可连接
+  - 禁止普通用户账户访问
+
+日志目录：
+  - %ProgramData%\unlose\logs（Service 写，管理员读）
+
+配置文件：
+  - %ProgramData%\unlose\config.json（管理员读写，Service 读）

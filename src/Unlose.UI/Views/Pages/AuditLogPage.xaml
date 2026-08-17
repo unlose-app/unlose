@@ -1,0 +1,303 @@
+<Page x:Class="Unlose.UI.Views.Pages.AuditLogPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      Background="Transparent">
+
+    <Page.Resources>
+        <DataTemplate x:Key="AuditRowTemplate">
+            <Border Margin="0,0,0,8" CornerRadius="8" BorderThickness="1">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background" Value="#80FFFFFF"/>
+                        <Setter Property="BorderBrush" Value="#66FFFFFF"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Level}" Value="Critical">
+                                <Setter Property="Background" Value="#FEF2F2"/>
+                                <Setter Property="BorderBrush" Value="#FED7D7"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <Expander Padding="0" Foreground="#0C4A6E" Header="{Binding}">
+                    <Expander.HeaderTemplate>
+                        <DataTemplate>
+                            <Grid Margin="12,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="160"/>
+                                    <ColumnDefinition Width="90"/>
+                                    <ColumnDefinition Width="160"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{Binding Timestamp}"
+                                           Foreground="#4A7A9B" FontSize="12"
+                                           FontFamily="Consolas" VerticalAlignment="Center"/>
+                                <Border Grid.Column="1" CornerRadius="4" Padding="8,3"
+                                        HorizontalAlignment="Left" VerticalAlignment="Center">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="#DBEAFE"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Level}" Value="Critical">
+                                                    <Setter Property="Background" Value="#FEE2E2"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Level}" Value="High">
+                                                    <Setter Property="Background" Value="#FEF3C7"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock Text="{Binding LocalizedLevel}" FontSize="10" FontWeight="Bold">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="#1D4ED8"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Level}" Value="Critical">
+                                                        <Setter Property="Foreground" Value="#DC2626"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Level}" Value="High">
+                                                        <Setter Property="Foreground" Value="#D97706"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Border>
+                                <TextBlock Grid.Column="2" Text="{Binding Actor}"
+                                           Foreground="#0EA5E9" FontSize="12"
+                                           FontFamily="Consolas" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="3" Text="{Binding LocalizedAction}"
+                                           Foreground="#0C4A6E" FontSize="12"
+                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                            </Grid>
+                        </DataTemplate>
+                    </Expander.HeaderTemplate>
+
+                    <Border Background="#F8FAFC" Padding="16" CornerRadius="0,0,8,8"
+                            BorderThickness="0,1,0,0" BorderBrush="#E2E8F0">
+                        <StackPanel>
+                            <TextBlock Text="事件详情" Loaded="LblDetailsTitle_Loaded"
+                                       Foreground="#4A7A9B" FontSize="11" FontWeight="Bold"
+                                       Margin="0,0,0,8"/>
+                            <Border Background="#0F172A" CornerRadius="6" Padding="14">
+                                <TextBox Background="Transparent" Foreground="#A3E635"
+                                         FontFamily="Consolas" FontSize="12"
+                                         BorderThickness="0" IsReadOnly="True" TextWrapping="Wrap"
+                                         Text="{Binding Details}"/>
+                            </Border>
+                            <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                <Button x:Name="BtnExtractSnapshot" Content="创建快照" Loaded="BtnExtractSnapshot_Loaded" Click="ExtractSnapshot_Click"
+                                        Background="#FFF7ED" Foreground="#C2410C"
+                                        BorderBrush="#FDBA74" BorderThickness="1"
+                                        Padding="10,6" Cursor="Hand">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border x:Name="bdr"
+                                                                Background="{TemplateBinding Background}"
+                                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </Expander>
+            </Border>
+        </DataTemplate>
+    </Page.Resources>
+
+    <Grid Margin="24,20,24,24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Page title -->
+        <TextBlock x:Name="AuditLogTitle" AutomationProperties.AutomationId="AuditLogTitle"
+                   Text="监控与审计日志" Foreground="#0369A1"
+                   FontSize="22" FontWeight="SemiBold" FontFamily="Segoe UI Semibold, Microsoft YaHei UI"
+                   Margin="0,0,0,16"/>
+
+        <!-- Filter bar (Glass Card) -->
+        <Border Grid.Row="1" Style="{StaticResource GlassCard}" Padding="16,14" Margin="0,0,0,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="1.5*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock x:Name="LblSearch" Text="🔍 关键词搜索" Foreground="#4A7A9B"
+                               FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                    <TextBox x:Name="SearchTextBox" TextChanged="SearchTextBox_TextChanged"
+                             Background="White" Foreground="#0C4A6E"
+                             BorderBrush="#D1D5DB" BorderThickness="1" Padding="8,6"
+                             FontSize="12" FontFamily="Consolas"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2">
+                    <TextBlock x:Name="LblSeverity" Text="级别" Foreground="#4A7A9B"
+                               FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                    <ComboBox x:Name="SeverityFilterComboBox"
+                              SelectionChanged="SeverityFilterComboBox_SelectionChanged"
+                              Background="White" Foreground="#0C4A6E"
+                              BorderBrush="#D1D5DB" SelectedIndex="0" FontSize="12">
+                        <ComboBoxItem x:Name="CbiSeverityAll" Content="全部级别" Tag="ALL"/>
+                        <ComboBoxItem x:Name="CbiSeverityHigh" Content="警示 (High/Critical)" Tag="HIGH_OR_CRITICAL"/>
+                        <ComboBoxItem x:Name="CbiSeverityInfo" Content="正常 (Info/OK)" Tag="INFO_OR_OK"/>
+                        <ComboBoxItem x:Name="CbiSeverityFail" Content="失败 (FAIL)" Tag="FAIL"/>
+                    </ComboBox>
+                </StackPanel>
+
+                <StackPanel Grid.Column="4">
+                    <TextBlock x:Name="LblCategory" Text="事件类型" Foreground="#4A7A9B"
+                               FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                    <ComboBox x:Name="CategoryFilterComboBox"
+                              SelectionChanged="CategoryFilterComboBox_SelectionChanged"
+                              Background="White" Foreground="#0C4A6E"
+                              BorderBrush="#D1D5DB" SelectedIndex="0" FontSize="12">
+                        <ComboBoxItem x:Name="CbiCategoryAll" Content="全部事件" Tag=""/>
+                        <ComboBoxItem x:Name="CbiCategoryAgentSession" Content="Agent 进程" Tag="AgentSession"/>
+                        <ComboBoxItem x:Name="CbiCategorySystemRestore" Content="系统还原" Tag="SystemRestoreApplied"/>
+                        <ComboBoxItem x:Name="CbiCategorySnapshot" Content="快照事件" Tag="Snapshot"/>
+                        <ComboBoxItem x:Name="CbiCategoryStorage" Content="存储告警" Tag="StorageLow"/>
+                        <ComboBoxItem x:Name="CbiCategoryProtection" Content="保护状态变更" Tag="ProtectionStateChanged"/>
+                    </ComboBox>
+                </StackPanel>
+
+                <StackPanel Grid.Column="6">
+                    <TextBlock x:Name="LblTimeRange" Text="时间范围" Foreground="#4A7A9B"
+                               FontSize="10" FontWeight="Bold" Margin="0,0,0,4"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                        <RadioButton x:Name="Last24HoursRadio" Content="近24h"
+                                     Foreground="#0C4A6E" FontSize="12" Margin="0,0,12,0"
+                                     IsChecked="True" Checked="TimeRangeRadio_Checked"/>
+                        <RadioButton x:Name="Last7DaysRadio" Content="近7天"
+                                     Foreground="#0C4A6E" FontSize="12" Margin="0,0,12,0"
+                                     Checked="TimeRangeRadio_Checked"/>
+                        <RadioButton x:Name="Last30DaysRadio" Content="近30天"
+                                     Foreground="#0C4A6E" FontSize="12"
+                                     Checked="TimeRangeRadio_Checked"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Grid.Column="8" Orientation="Horizontal" VerticalAlignment="Bottom">
+                    <Button x:Name="RefreshButton" Content="刷新" Click="RefreshButton_Click"
+                            Style="{StaticResource ModernButton}"
+                            Padding="16,8" Height="34" Margin="0,0,8,0"/>
+                    <Button x:Name="ExportButton" Content="📥 导出 CSV" Click="ExportButton_Click"
+                            Background="#22C55E" Foreground="White" BorderThickness="0"
+                            Padding="14,8" Height="34" Cursor="Hand"
+                            Style="{StaticResource ModernButton}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Result stats + header row -->
+        <Grid Grid.Row="2" Margin="0,0,0,6">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <TextBlock Foreground="#4A7A9B" FontSize="12">
+                    <Run x:Name="RunMatchPrefix" Text="应用当前筛选项，匹配 "/>
+                    <Run x:Name="ResultCountText" Text="—" Foreground="#0C4A6E"
+                         FontSize="13" FontWeight="Bold"/>
+                    <Run x:Name="RunMatchSuffix" Text=" 条审计日志"/>
+                </TextBlock>
+            </StackPanel>
+            <Grid Grid.Row="1" HorizontalAlignment="Stretch">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="160"/>
+                    <ColumnDefinition Width="90"/>
+                    <ColumnDefinition Width="160"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="ColTime" Grid.Column="0" Text="时间" Foreground="#4A7A9B"
+                           FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
+                <TextBlock x:Name="ColLevel" Grid.Column="1" Text="级别" Foreground="#4A7A9B"
+                           FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
+                <TextBlock x:Name="ColActor" Grid.Column="2" Text="来源进程" Foreground="#4A7A9B"
+                           FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
+                <TextBlock x:Name="ColAction" Grid.Column="3" Text="事件摘要" Foreground="#4A7A9B"
+                           FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
+            </Grid>
+        </Grid>
+
+        <!-- Expandable row list + empty / degraded states -->
+        <Grid Grid.Row="3">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl Name="AuditItemsControl" ItemTemplate="{StaticResource AuditRowTemplate}"/>
+            </ScrollViewer>
+            <StackPanel x:Name="EmptyStatePanel" Visibility="Collapsed"
+                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Margin="0,40,0,40">
+                <TextBlock Text="📋" FontSize="40" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                <TextBlock x:Name="EmptyStateTitle" Text="暂无匹配日志"
+                           Foreground="#0C4A6E" FontSize="15" FontWeight="SemiBold"
+                           HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                <TextBlock x:Name="EmptyStateDesc" Text="当前筛选条件下没有日志记录。"
+                           Foreground="#4A7A9B" FontSize="12" TextAlignment="Center"
+                           TextWrapping="Wrap" MaxWidth="320" HorizontalAlignment="Center"/>
+                <Button x:Name="BtnRetryLoad" Content="重试" Click="RetryLoad_Click"
+                        Style="{StaticResource ModernButton}" Padding="16,8" Margin="0,16,0,0"
+                        HorizontalAlignment="Center" Visibility="Collapsed"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Pagination controls -->
+        <Border Grid.Row="4" Style="{StaticResource GlassCard}" Padding="12,10" Margin="0,12,0,0">
+            <Grid>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock x:Name="LblPageSize" Text="每页显示" Foreground="#4A7A9B"
+                               FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <ComboBox x:Name="PageSizeComboBox" Width="70" FontSize="11"
+                              Background="White" BorderBrush="#D1D5DB"
+                              SelectedIndex="1" SelectionChanged="PageSize_SelectionChanged">
+                        <ComboBoxItem Content="20"/>
+                        <ComboBoxItem Content="50"/>
+                        <ComboBoxItem Content="100"/>
+                        <ComboBoxItem Content="200"/>
+                    </ComboBox>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Button x:Name="BtnFirstPage" Content="⏮ 首页" Style="{StaticResource ModernButton}"
+                            FontSize="11" Padding="10,5" Margin="0,0,4,0" Click="BtnFirstPage_Click"/>
+                    <Button x:Name="BtnPrevPage" Content="◀ 上一页" Style="{StaticResource ModernButton}"
+                            FontSize="11" Padding="10,5" Margin="0,0,4,0" Click="BtnPrevPage_Click"/>
+                    <TextBlock x:Name="TxtPageInfo" Text="第 1 / 1 页" Foreground="#0C4A6E"
+                               FontSize="12" FontWeight="Medium" VerticalAlignment="Center"
+                               Margin="8,0"/>
+                    <Button x:Name="BtnNextPage" Content="下一页 ▶" Style="{StaticResource ModernButton}"
+                            FontSize="11" Padding="10,5" Margin="4,0,0,0" Click="BtnNextPage_Click"/>
+                    <Button x:Name="BtnLastPage" Content="末页 ⏭" Style="{StaticResource ModernButton}"
+                            FontSize="11" Padding="10,5" Margin="4,0,0,0" Click="BtnLastPage_Click"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <TextBlock x:Name="LblTotalCount" Text="共 0 条" Foreground="#4A7A9B"
+                               FontSize="11" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Page>

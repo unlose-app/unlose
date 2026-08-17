@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- CODE-007 fix: changed to net8.0-windows, matching the CLI's use of System.IO.Pipes Windows-specific behavior -->
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>unlose</AssemblyName>
+    <ApplicationIcon>..\Unlose.UI\Resources\unlose.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Unlose.Core\Unlose.Core.csproj" />
+  </ItemGroup>
+
+</Project>

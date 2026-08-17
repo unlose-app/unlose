@@ -1,0 +1,181 @@
+<Page x:Class="Unlose.UI.Views.Pages.ImmersiveRestorePage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      Background="#111116">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="180"/>
+            <RowDefinition Height="60"/>
+        </Grid.RowDefinitions>
+
+        <!-- Exit/back control -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
+            <Button x:Name="BtnBack" Content="← 返回" Background="Transparent" Foreground="#94A3B8"
+                    FontSize="16" BorderThickness="0" Cursor="Hand" Click="Cancel_Click" HorizontalAlignment="Left"/>
+            <TextBlock x:Name="LblTitle" Text="沉浸式对比还原" Foreground="White" FontSize="18" FontWeight="Bold" Margin="24,0,0,0" VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- Page-level diff summary -->
+        <Border x:Name="DiffSummaryChip" Grid.Row="1" Background="#161622" BorderBrush="#33FFFFFF" BorderThickness="1"
+                CornerRadius="4" Padding="12,6" Margin="0,0,0,16" Visibility="Collapsed">
+            <TextBlock x:Name="DiffSummaryText" Text="" Foreground="#94A3B8" FontSize="12"/>
+        </Border>
+
+        <!-- Dual-track tree comparison -->
+        <Grid Grid.Row="2" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="1"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left pane: history version -->
+            <Border Grid.Column="0" Background="#161622" BorderBrush="#33FFFFFF" BorderThickness="1" CornerRadius="8,0,0,8" Padding="8">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock x:Name="LblLeftHeader" Grid.Row="0" Text="🕒 历史快照" Foreground="#0EA5E9" FontWeight="Bold" Margin="8,8,0,12"/>
+                    <TreeView x:Name="LeftTreeView" Grid.Row="1" Background="Transparent" BorderThickness="0" Foreground="White"
+                              SelectedItemChanged="LeftTreeView_SelectedItemChanged">
+                        <TreeView.ItemContainerStyle>
+                            <Style TargetType="TreeViewItem">
+                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                            </Style>
+                        </TreeView.ItemContainerStyle>
+                        <TreeView.ItemTemplate>
+                            <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                                <StackPanel Orientation="Horizontal">
+                                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,4,0"
+                                              ToolTip="勾选后可批量挑捡恢复" Loaded="LeftItemCheckBox_Loaded"/>
+                                    <TextBlock Text="{Binding Icon}" Margin="0,0,4,0"/>
+                                    <TextBlock Text="{Binding Name}" Foreground="{Binding Color}"/>
+                                    <TextBlock Text="{Binding Suffix}" Foreground="{Binding Color}" FontSize="11"
+                                               VerticalAlignment="Center" Margin="4,0,0,0"/>
+                                    <TextBlock Text="{Binding ModifiedText}" Foreground="#64748B" FontSize="11"
+                                               VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                </StackPanel>
+                            </HierarchicalDataTemplate>
+                        </TreeView.ItemTemplate>
+                    </TreeView>
+                </Grid>
+            </Border>
+
+            <!-- Center splitter -->
+            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="#33FFFFFF"/>
+
+            <!-- Right pane: current state -->
+            <Border Grid.Column="2" Background="#161622" BorderBrush="#33FFFFFF" BorderThickness="1" CornerRadius="0,8,8,0" Padding="8">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock x:Name="LblRightHeader" Grid.Row="0" Text="📂 当前状态" Foreground="#22C55E" FontWeight="Bold" Margin="8,8,0,12"/>
+                    <TreeView x:Name="RightTreeView" Grid.Row="1" Background="Transparent" BorderThickness="0" Foreground="White">
+                        <TreeView.ItemContainerStyle>
+                            <Style TargetType="TreeViewItem">
+                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                            </Style>
+                        </TreeView.ItemContainerStyle>
+                        <TreeView.ItemTemplate>
+                            <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Icon}" Margin="0,0,4,0"/>
+                                    <TextBlock Text="{Binding Name}" Foreground="{Binding Color}"/>
+                                    <TextBlock Text="{Binding Suffix}" Foreground="{Binding Color}" FontSize="11"
+                                               VerticalAlignment="Center" Margin="4,0,0,0"/>
+                                    <TextBlock Text="{Binding ModifiedText}" Foreground="#64748B" FontSize="11"
+                                               VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                </StackPanel>
+                            </HierarchicalDataTemplate>
+                        </TreeView.ItemTemplate>
+                    </TreeView>
+                </Grid>
+            </Border>
+            <!-- Load-failure/empty-state overlay (covers both trees, with a back button) -->
+            <Border x:Name="EmptyStatePanel" Grid.Column="0" Grid.ColumnSpan="3" Background="#111116" Visibility="Collapsed">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24">
+                    <TextBlock x:Name="EmptyStateText" Text="" Foreground="#94A3B8" FontSize="14" TextWrapping="Wrap"
+                               TextAlignment="Center" MaxWidth="520" Margin="0,0,0,16"/>
+                    <Button x:Name="BtnEmptyStateBack" Content="← 返回" Background="#161622" Foreground="White"
+                            BorderBrush="#33FFFFFF" BorderThickness="1" Padding="20,8" Cursor="Hand"
+                            HorizontalAlignment="Center" Click="Cancel_Click"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Diff preview panel -->
+        <Border Grid.Row="3" Background="#000000" CornerRadius="8" BorderBrush="#333333" BorderThickness="1" Margin="0,0,0,16">
+            <Grid Margin="16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0" Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="LblDiffHeader" Text="&lt;/&gt; 文件差异预览" Foreground="#94A3B8" FontSize="12" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="DiffStatsText" Grid.Column="1" Text="" Foreground="#94A3B8" FontSize="12" VerticalAlignment="Center"/>
+                </Grid>
+                <Grid Grid.Row="1">
+                    <ScrollViewer x:Name="DiffScrollViewer" VerticalScrollBarVisibility="Auto" Height="118">
+                        <ItemsControl x:Name="DiffLineList" FontFamily="Consolas" FontSize="13">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{Binding Background}" Padding="6,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Number}" Foreground="#64748B" Width="40"/>
+                                            <TextBlock Text="{Binding Prefix}" Foreground="{Binding Foreground}" Width="14"/>
+                                            <TextBlock Text="{Binding Text}" Foreground="{Binding Foreground}"/>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                    <!-- Placeholder/fallback: shown when no file is selected, binary, read failed, or both sides identical; collapsed for a normal diff -->
+                    <TextBlock x:Name="DiffPreviewText" FontFamily="Consolas" FontSize="13" Foreground="#E2E8F0"
+                               Text="点击左侧历史快照中的文件以预览差异。" TextWrapping="Wrap" VerticalAlignment="Top"/>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- Timeline control area -->
+        <Grid Grid.Row="4" Background="#161622">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="16,0">
+                <TextBlock x:Name="LblTimelineLabel"
+                           Text="← 更早  [ 加载中... ]  更晚 →"
+                           Foreground="#0EA5E9" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                <Slider x:Name="TimelineSlider" Minimum="0" Maximum="100" Value="0"
+                        SmallChange="1" IsSnapToTickEnabled="True" TickFrequency="1"
+                        TickPlacement="BottomRight" Foreground="#0EA5E9"
+                        ValueChanged="Timeline_ValueChanged"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
+                <TextBlock Name="RestoreStatusText" Text="" Foreground="#94A3B8" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                <ProgressBar Name="RestoreProgress" Width="100" Height="8" Minimum="0" Maximum="100" Value="0" Opacity="0" Margin="0,0,12,0"/>
+                <Button x:Name="BtnRestoreSelected" Content="✅ 恢复选中项到新目录" Background="#22C55E" Foreground="#101018"
+                        Padding="16,10" BorderThickness="0" Cursor="Hand" Margin="0,0,12,0" Click="RestoreSelected_Click"/>
+                <Button x:Name="BtnRestoreToDir" Content="🗂️ 整卷内容恢复到新目录" Background="#161622" Foreground="White"
+                        Padding="16,10" BorderThickness="1" BorderBrush="#33FFFFFF" Cursor="Hand" Margin="0,0,12,0" Click="RestoreToNewDir_Click"/>
+                <!-- In-place force overwrite: high risk (true rollback + /purge deletes original volume files); hidden per user request.
+                     Use "restore selected/entire volume to a new directory" plus a manual overwrite instead when needed. -->
+                <Button x:Name="BtnForceRestore" Content="⚠️ 原位覆盖还原（高风险）" Background="#EF4444" Foreground="White"
+                        Padding="16,10" BorderThickness="0" Cursor="Hand" Click="ConfirmRestore_Click"
+                        Visibility="Collapsed"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Page>

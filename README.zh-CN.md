@@ -11,6 +11,8 @@ unlose 是 Windows 上 AI Agent 操作事故的最后一道安全网。AI Agent 
 
 ![状态：early alpha / 开发者预览](https://img.shields.io/badge/status-early%20alpha%20%2F%20developer%20preview-orange)
 
+**[官网](https://unlose.app/zh/) · [下载](https://unlose.app/download) · [文档](https://unlose.app/zh/docs)**
+
 ---
 
 ## 为什么有 unlose
@@ -45,7 +47,7 @@ unlose 不猜测 AI 要做什么。它只保证一件事：**无论 AI 做了什
 |---|---|---|
 | 角色 | 第一道防线：拦截危险命令 | **最后一道防线：快照安全网** |
 | 思路 | 猜测并拦截破坏路径 | 不猜测，只保存 |
-| 能绕过吗？ | 能——GPT-5.6 事件已证明 | **不能——快照在删除之前就已存在** |
+| 能绕过吗？ | 能——2026-07-10 事件已证明 | **不能——快照在删除之前就已存在** |
 
 > **拦截器挡子弹。unlose 给时光机。两个都用。**
 
@@ -102,11 +104,24 @@ unlose 不猜测 AI 要做什么。它只保证一件事：**无论 AI 做了什
 
 ---
 
+## 下载
+
+**[⬇ 下载 Windows 版（x64）](https://unlose.app/download)** —— 一个自包含 MSI（约 140MB，内嵌 .NET 运行时，无前置依赖）。
+
+| 渠道 | 链接 | 说明 |
+|---|---|---|
+| 官网直下（推荐） | https://unlose.app/download | 国内约 25 秒（阿里云镜像）；海外走 Cloudflare R2 |
+| GitHub Releases | [releases/latest](https://github.com/unlose-app/unlose/releases/latest) | SHA256 见发布说明 |
+
+两个渠道的安装包**逐字节一致**——请用[发布说明](https://github.com/unlose-app/unlose/releases/latest)或[官网文档页](https://unlose.app/zh/docs)中的 SHA256 校验。安装包当前未签名，Windows 可能提示"无法验证发布者"，属正常现象，代码签名正在申请中。**官网与本仓库是唯一官方来源。**
+
+---
+
 ## 快速开始
 
 ```powershell
-# 1. 安装（MSI——注册 Windows 服务，随系统自启）
-#    src/Installer/bin/Release/unlose-setup-x64.msi  （安装到 C:\Program Files\unlose\）
+# 1. 安装 MSI（见上方"下载"）——注册 Windows 服务，随系统自启
+#    （安装到 C:\Program Files\unlose\）
 
 # 2. 拍一张快照
 unlose snapshot --label "开工前先保护"

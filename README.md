@@ -10,6 +10,8 @@ Not an interceptor. A time machine.
 
 ![Status: early alpha / developer preview](https://img.shields.io/badge/status-early%20alpha%20%2F%20developer%20preview-orange)
 
+**[Website](https://unlose.app) · [Download](https://unlose.app/download) · [Docs](https://unlose.app/docs)**
+
 ---
 
 ## Why unlose exists
@@ -44,7 +46,7 @@ unlose does not guess what the AI will do. It only guarantees one thing: **whate
 |---|---|---|
 | Role | First line: block dangerous commands | **Last line: snapshot safety net** |
 | Approach | Guess and block destructive paths | Don't guess. Just save. |
-| Bypassable? | Yes — proven by the GPT-5.6 event | **No — the snapshot exists before the deletion** |
+| Bypassable? | Yes — proven by the 2026-07-10 incident | **No — the snapshot exists before the deletion** |
 
 > **Interceptors stop the bullet. unlose is the time machine. Use both.**
 
@@ -101,11 +103,24 @@ Snapshot interval, protected volumes, low-disk threshold, agent list… save in 
 
 ---
 
+## Download
+
+**[⬇ Download for Windows (x64)](https://unlose.app/download)** — one self-contained MSI (~140 MB, .NET runtime embedded, no prerequisites).
+
+| Channel | Link | Notes |
+|---|---|---|
+| Website (direct) | https://unlose.app/download | Fast in mainland China (~25 s); elsewhere served from Cloudflare R2 |
+| GitHub Releases | [releases/latest](https://github.com/unlose-app/unlose/releases/latest) | SHA256 in the release notes |
+
+Both channels serve the **byte-identical** installer — verify the SHA256 against the value in the [release notes](https://github.com/unlose-app/unlose/releases/latest) or on the [docs page](https://unlose.app/docs). The installer is currently unsigned, so Windows may show "publisher cannot be verified"; this is expected and code signing is in progress. **unlose.app and this repository are the only official sources.**
+
+---
+
 ## Quick start
 
 ```powershell
-# 1. Install (MSI — registers the Windows service, auto-starts with the system)
-#    src/Installer/bin/Release/unlose-setup-x64.msi  (installs to C:\Program Files\unlose\)
+# 1. Install the MSI (see Download above) — registers the Windows service,
+#    auto-starts with the system (installs to C:\Program Files\unlose\)
 
 # 2. Take a snapshot
 unlose snapshot --label "protecting before I work"

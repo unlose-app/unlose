@@ -94,7 +94,7 @@ set "PATH=%USERPROFILE%\.dotnet\tools;%PATH%"
 wix --version >nul 2>&1
 if errorlevel 1 (
   echo Installing wix dotnet tool...
-  dotnet tool install --global wix
+  dotnet tool install --global wix --version 6.0.2
   if errorlevel 1 (
     echo WiX tool install failed.
     exit /b 1

@@ -13,6 +13,8 @@ unlose 是 Windows 上 AI Agent 操作事故的最后一道安全网。AI Agent 
 
 **[官网](https://unlose.app/zh/) · [下载](https://unlose.app/download) · [文档](https://unlose.app/zh/docs)**
 
+![unlose 演示：AI 会话前自动快照 → 文件被删 → 拖时间轴 → 勾选恢复](assets/unlose-demo-zh.gif)
+
 ---
 
 ## 为什么有 unlose

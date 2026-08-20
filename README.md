@@ -12,6 +12,8 @@ Not an interceptor. A time machine.
 
 **[Website](https://unlose.app) · [Download](https://unlose.app/download) · [Docs](https://unlose.app/docs)**
 
+![unlose demo: snapshot before the AI session, files deleted, drag the timeline, restore](assets/unlose-demo-en.gif)
+
 ---
 
 ## Why unlose exists

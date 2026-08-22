@@ -22,7 +22,7 @@ Not an interceptor. A time machine.
 
 AI coding tools (Claude Code, Cursor, Copilot, Gemini CLI, …) execute real operations on your machine: rewriting code, reorganizing directories, batch-processing files. They are powerful — and they make mistakes: misunderstood instructions, ambiguous commands, or manipulation into destructive actions.
 
-This is not hypothetical. On 2026-07-10, prominent founder Matt Shumer's Mac was wiped by an AI assistant (`rm -rf` on his user directory) — and the AI **bypassed every command interceptor in 4 rounds**: `rm` → `unlink`/`find -delete` → bulk file deletion → underlying API calls. Even the most professional heavy user was not spared.
+This is not hypothetical. On 2026-07-10, prominent founder Matt Shumer's Mac was wiped by an AI assistant (`rm -rf` on his user directory) — and the interceptor logs told the scarier story: every blocked command was followed by a new path around it, again and again, within a single session. Even the most professional heavy user was not spared.
 
 ### The truth: interception is a losing cat-and-mouse game
 

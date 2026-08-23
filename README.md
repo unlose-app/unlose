@@ -66,6 +66,7 @@ unlose does not guess what the AI will do. It only guarantees one thing: **whate
 |---|---|
 | Scheduled | Three fixed times daily by default (08:00 / 13:00 / 18:00); can switch to interval mode (6/12/24/48h) |
 | **Before AI sessions** | Detects 30+ mainstream AI agents launching; snapshots before they act |
+| **Agent-initiated** | Agents proactively snapshot before dangerous operations themselves (via the injected memory directive, skill file, or MCP) — we see these in the log on our own machines every day |
 | Pre-restore safety | Auto-snapshot before every restore, so a failed restore never costs you the current state |
 | Manual / CLI / MCP | One-click, or trigger from the command line or the AI tool itself |
 
@@ -85,7 +86,7 @@ unlose does not guess what the AI will do. It only guarantees one thing: **whate
 ### 🤖 30+ AI agents detected — the AI knows "back up before you act"
 
 - Built-in detection for 30+ mainstream agents (Claude Code, Cursor, Copilot, Gemini CLI, Kimi, Qwen, Codex, DeepSeek, …) — newly installed tools work with zero configuration
-- **Global memory injection (unique)**: writes a protection directive into your `~/AGENTS.md` and installed agents' global memory files — "snapshot before sessions, snapshot before dangerous operations, recover with unlose". **The AI reads it itself.** Original content preserved, injection block clearly marked, no residue after uninstall
+- **Global memory injection (unique)**: writes a protection directive into your `~/AGENTS.md` and installed agents' global memory files — "snapshot before sessions, snapshot before dangerous operations, recover with unlose". **The AI reads it itself.** Original content preserved, injection block clearly marked, no residue after uninstall. And it's not theoretical: our own snapshot logs show "agent-initiated" entries daily — agents pausing to snapshot before bulk deletes, unprompted
 
 ### 📊 Real status & event log — visible, trustworthy
 

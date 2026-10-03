@@ -25,6 +25,8 @@ AI 编程工具（Claude Code、Cursor、Copilot、Gemini CLI……）会在你�
 
 这不是假设。2026-07-10，知名创始人 Matt Shumer 的 Mac 被 AI 助手清空了（`rm -rf` 用户目录）——拦截日志记录了更值得警惕的一面：每一次拦截后面，都跟着一条新的绕过路径，同一会话里，一次又一次。即使是最专业的重度用户也无法幸免。
 
+Windows——unlose 所在的平台——也未能幸免：2026 年 9 月，一位开发者的 Claude Code 在“清理”中沿 614 个 Windows junction 追删，103 秒删掉 48,218 个活文件，连 git 对象库一并损毁，git 也救不回来（[TechRadar 报道](https://www.techradar.com/pro/security/i-broke-something-a-claude-code-ai-agent-deleted-48-000-files-in-just-over-100-seconds-then-apologized-for-doing-so)）。
+
 ### 真相：拦截是一场打不赢的猫鼠游戏
 
 AI 越聪明，绕过拦截的能力就越强。堵住 `rm -rf`，它会找到另一种方式做同样的事。**世上没有任何拦截器能堵住所有破坏路径。**

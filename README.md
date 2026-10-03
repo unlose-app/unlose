@@ -24,6 +24,8 @@ AI coding tools (Claude Code, Cursor, Copilot, Gemini CLI, …) execute real ope
 
 This is not hypothetical. On 2026-07-10, prominent founder Matt Shumer's Mac was wiped by an AI assistant (`rm -rf` on his user directory) — and the interceptor logs told the scarier story: every blocked command was followed by a new path around it, again and again, within a single session. Even the most professional heavy user was not spared.
 
+Windows — where unlose lives — is not spared either: in September 2026, a developer's Claude Code followed 614 Windows junctions during a cleanup and deleted 48,218 live files in 103 seconds, corrupting the git object database along the way, so even git could not save the work (as reported by [TechRadar](https://www.techradar.com/pro/security/i-broke-something-a-claude-code-ai-agent-deleted-48-000-files-in-just-over-100-seconds-then-apologized-for-doing-so)).
+
 ### The truth: interception is a losing cat-and-mouse game
 
 The smarter the AI, the better it gets at bypassing interceptions. Block `rm -rf` and it will find another way to do the same thing. **No interceptor in the world can block every destructive path.**
